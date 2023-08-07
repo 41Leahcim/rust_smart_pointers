@@ -88,8 +88,15 @@ impl<T: std::fmt::Debug> std::fmt::Debug for UniquePointer<T> {
 
 impl<T> Drop for UniquePointer<T> {
     fn drop(&mut self) {
-        // Free the memory pointed to by the UniquePointer
-        unsafe { libc::free(self.0.as_ptr().cast()) };
+        // Get the pointer
+        let pointer = self.0.as_ptr();
+        unsafe {
+            // Call the destructor of the pointed to value
+            pointer.drop_in_place();
+
+            // Free the memory
+            libc::free(pointer.cast());
+        };
     }
 }
 

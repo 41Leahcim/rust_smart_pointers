@@ -108,9 +108,17 @@ impl<T> Drop for SharedPointer<T> {
         // Decrement the reference count
         reference_counter.1 -= 1;
 
-        // Free the memory, if the reference count is 0
+        // If the reference count is 0
         if reference_counter.1 == 0 {
-            unsafe { libc::free(self.0.as_ptr().cast()) };
+            // Get the pointer
+            let pointer = self.0.as_ptr();
+            unsafe {
+                // Call the destructor of the pointed to value
+                pointer.drop_in_place();
+
+                // Free the memory
+                libc::free(pointer.cast());
+            };
         }
     }
 }
