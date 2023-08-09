@@ -43,14 +43,7 @@ impl<T> UniquePointer<T> {
 
 impl<T: Default> Default for UniquePointer<T> {
     fn default() -> Self {
-        // Allocate memory
-        let pointer = Self::allocate_memory();
-
-        // Create the default value of the type and store it at the address pointed to
-        unsafe { pointer.as_ptr().write(T::default()) };
-
-        // Store the pointer in a UniquePointer and return it
-        Self(pointer)
+        Self::new(T::default())
     }
 }
 
@@ -61,28 +54,38 @@ impl<T: Clone> Clone for UniquePointer<T> {
     }
 }
 
-impl<T> Deref for UniquePointer<T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
+impl<T> AsRef<T> for UniquePointer<T> {
+    fn as_ref(&self) -> &T {
         // Cast the pointer to a reference and return it
         unsafe { self.0.as_ref() }
     }
 }
 
-impl<T> DerefMut for UniquePointer<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
+impl<T> AsMut<T> for UniquePointer<T> {
+    fn as_mut(&mut self) -> &mut T {
         // Cast the pointer to a mutable reference and return it
         unsafe { self.0.as_mut() }
+    }
+}
+
+impl<T> Deref for UniquePointer<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        self.as_ref()
+    }
+}
+
+impl<T> DerefMut for UniquePointer<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.as_mut()
     }
 }
 
 impl<T: std::fmt::Debug> std::fmt::Debug for UniquePointer<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // Write the UniquePointer as if the value pointed to is stored in it
-        f.write_fmt(format_args!("UniquePointer({:?})", unsafe {
-            self.0.as_ref()
-        }))
+        f.write_fmt(format_args!("UniquePointer({:?})", self.as_ref()))
     }
 }
 

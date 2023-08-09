@@ -1,8 +1,4 @@
-use std::{
-    mem,
-    ops::{Deref, DerefMut},
-    ptr,
-};
+use std::{mem, ops::Deref, ptr};
 
 #[derive(Debug)]
 struct ReferenceCounter<T>(T, usize);
@@ -51,17 +47,7 @@ impl<T> SharedPointer<T> {
 
 impl<T: Default> Default for SharedPointer<T> {
     fn default() -> Self {
-        // Allocate memory
-        let pointer = Self::allocate_memory();
-
-        // Create a reference counter storing the default value of the type to store
-        let reference_counter = ReferenceCounter(T::default(), 1);
-
-        // Store the reference counter at the address pointed to by the pointer
-        unsafe { pointer.as_ptr().write(reference_counter) };
-
-        // Store the pointer in a SharedPointer and return it
-        Self(pointer)
+        Self::new(T::default())
     }
 }
 
@@ -77,26 +63,25 @@ impl<T> Clone for SharedPointer<T> {
     }
 }
 
-impl<T> Deref for SharedPointer<T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
+impl<T> AsRef<T> for SharedPointer<T> {
+    fn as_ref(&self) -> &T {
         // Return a reference to the value stored in the reference counter
         unsafe { &self.0.as_ref().0 }
     }
 }
 
-impl<T> DerefMut for SharedPointer<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        // Return a mutable reference to the value stored in the reference counter
-        unsafe { &mut self.0.as_mut().0 }
+impl<T> Deref for SharedPointer<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        self.as_ref()
     }
 }
 
 impl<T: std::fmt::Debug> std::fmt::Debug for SharedPointer<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // Write the SharedPointer as if the ReferenceCounter is stored in it
-        f.write_fmt(format_args!("SharedPtr({:?})", unsafe { self.0.as_ref() }))
+        f.write_fmt(format_args!("SharedPtr({:?})", self.as_ref()))
     }
 }
 
@@ -125,6 +110,8 @@ impl<T> Drop for SharedPointer<T> {
 
 #[cfg(test)]
 mod tests {
+    use std::cell::RefCell;
+
     use super::SharedPointer;
 
     #[test]
@@ -144,18 +131,21 @@ mod tests {
         // Generate a random value
         let mut value = rand::random::<i64>();
 
-        // Store it in a SharedPointer
-        let mut pointer = SharedPointer::new(value);
+        // Store it in a RefCell in a SharedPointer
+        let pointer = SharedPointer::new(RefCell::new(value));
+
+        // Take a reference to the value in the RefCell
+        let mut reference = pointer.borrow_mut();
 
         // Check whether it was stored correctly
-        assert_eq!(*pointer, value);
+        assert_eq!(*reference, value);
 
         // Generate a new value and store it in the pointer
         value = rand::random();
-        *pointer = value;
+        *reference = value;
 
         // Check whether the value was changed correctly
-        assert_eq!(*pointer, value);
+        assert_eq!(*reference, value);
     }
 
     #[test]

@@ -1,3 +1,5 @@
+use std::cell::RefCell;
+
 use smart_pointers::SharedPointer;
 
 #[test]
@@ -18,17 +20,20 @@ fn pointer_manipulation() {
     let mut value = rand::random::<i64>();
 
     // Store it in a SharedPointer
-    let mut pointer = SharedPointer::new(value);
+    let pointer = SharedPointer::new(RefCell::new(value));
+
+    // Take a reference to the value in the RefCell
+    let mut reference = pointer.borrow_mut();
 
     // Check whether it was stored correctly
-    assert_eq!(*pointer, value);
+    assert_eq!(*reference, value);
 
     // Generate a new value and store it in the pointer
     value = rand::random();
-    *pointer = value;
+    *reference = value;
 
     // Check whether the value was changed correctly
-    assert_eq!(*pointer, value);
+    assert_eq!(*reference, value);
 }
 
 #[test]
