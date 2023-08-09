@@ -7,27 +7,16 @@ pub struct SharedPointer<T>(ptr::NonNull<ReferenceCounter<T>>);
 
 impl<T> SharedPointer<T> {
     fn allocate_memory() -> ptr::NonNull<ReferenceCounter<T>> {
-        // Create a null pointer
-        let mut pointer = ptr::null_mut();
-
-        // Create a pointer to the null pointer, so a value can be assigned to it
-        // Calculate the alignment for and get the size of the ReferenceCounter to store
-        let address = (&mut pointer as *mut *mut ReferenceCounter<T>).cast();
-        let alignment = mem::align_of::<ReferenceCounter<T>>().max(mem::size_of::<usize>());
-        let amount_to_allocate = mem::size_of::<ReferenceCounter<T>>();
-
         // Allocate memory
-        let error_code = unsafe { libc::posix_memalign(address, alignment, amount_to_allocate) };
+        let pointer = unsafe { libc::malloc(mem::size_of::<ReferenceCounter<T>>()) };
 
-        // Check for allocation errors
-        match error_code {
-            libc::EINVAL => panic!("Alignment incorrect"),
-            libc::ENOMEM => panic!("No memory"),
-            _ => (),
+        // Panic if it failed
+        if pointer.is_null() {
+            panic!("No memory");
         }
 
         // Store the pointer in a non-null pointer and return it
-        ptr::NonNull::new(pointer).unwrap()
+        ptr::NonNull::new(pointer.cast()).unwrap()
     }
 
     pub fn new(value: T) -> Self {

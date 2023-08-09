@@ -6,27 +6,16 @@ pub struct UniquePointer<T>(ptr::NonNull<T>);
 
 impl<T> UniquePointer<T> {
     fn allocate_memory() -> ptr::NonNull<T> {
-        // Create a null pointer
-        let mut pointer = ptr::null_mut();
-
-        // Create a pointer to the null pointer, so a value can be assigned to it
-        // Calculate the alignment for and get the size of the type to store
-        let address = (&mut pointer as *mut *mut T).cast();
-        let alignment = mem::align_of::<T>().max(mem::size_of::<usize>());
-        let amount_to_allocate = mem::size_of::<T>();
-
         // Allocate memory
-        let error_code = unsafe { libc::posix_memalign(address, alignment, amount_to_allocate) };
+        let pointer = unsafe { libc::malloc(mem::size_of::<T>()) };
 
-        // Check for allocation errors
-        match error_code {
-            libc::EINVAL => panic!("Alignment incorrect"),
-            libc::ENOMEM => panic!("No memory"),
-            _ => (),
+        // Panic if it failed
+        if pointer.is_null() {
+            panic!("No memory");
         }
 
         // Store the pointer in a non-null pointer and return it
-        ptr::NonNull::<T>::new(pointer).unwrap()
+        ptr::NonNull::<T>::new(pointer.cast()).unwrap()
     }
 
     pub fn new(value: T) -> Self {
