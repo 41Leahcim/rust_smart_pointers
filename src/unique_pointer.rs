@@ -6,6 +6,7 @@ use core::{
 
 extern crate alloc;
 
+#[cfg(feature = "alloc")]
 use alloc::borrow::ToOwned;
 
 pub struct UniquePointer<T>(ptr::NonNull<T>);
@@ -42,10 +43,19 @@ impl<T: Default> Default for UniquePointer<T> {
     }
 }
 
+#[cfg(feature = "alloc")]
 impl<T: Clone> Clone for UniquePointer<T> {
     fn clone(&self) -> Self {
         // Clone the value stored in the UniquePointer and use it to create a new one
         Self::new(self.deref().to_owned())
+    }
+}
+
+#[cfg(not(feature = "alloc"))]
+impl<T: Copy> Clone for UniquePointer<T> {
+    fn clone(&self) -> Self {
+        // Clone the value stored in the UniquePointer and use it to create a new one
+        Self::new(*self.deref())
     }
 }
 
