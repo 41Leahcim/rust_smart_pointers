@@ -1,3 +1,4 @@
+#![no_std]
 mod shared_pointer;
 mod unique_pointer;
 

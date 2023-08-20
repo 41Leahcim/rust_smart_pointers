@@ -52,7 +52,7 @@ fn cloning() {
     let pointer = UniquePointer::new(value);
 
     // Clone the pointer and check whether the values are the same
-    assert_ne!(*pointer, *pointer.clone());
+    assert_eq!(*pointer, *pointer.clone());
 }
 
 #[test]
@@ -64,5 +64,5 @@ fn debug() {
     let pointer = UniquePointer::new(value);
 
     // Check whether the pointer is printed as expected
-    assert_eq!(format!("{:?}", pointer), "UniquePointer(5)".to_owned());
+    assert_eq!(format!("{:?}", pointer), format!("UniquePointer({value})"));
 }

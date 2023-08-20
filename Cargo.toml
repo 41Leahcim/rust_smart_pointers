@@ -7,5 +7,6 @@ edition = "2021"
 opt-level = 'z'
 
 [dependencies]
-libc = "0.2.147"
+heapless = "0.7.16"
+libc = { version = "0.2.147", default-features = false }
 rand = "0.8.5"

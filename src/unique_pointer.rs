@@ -1,6 +1,12 @@
-use std::mem;
-use std::ops::{Deref, DerefMut};
-use std::ptr;
+use core::{
+    mem,
+    ops::{Deref, DerefMut},
+    ptr,
+};
+
+extern crate alloc;
+
+use alloc::borrow::ToOwned;
 
 pub struct UniquePointer<T>(ptr::NonNull<T>);
 
@@ -71,8 +77,8 @@ impl<T> DerefMut for UniquePointer<T> {
     }
 }
 
-impl<T: std::fmt::Debug> std::fmt::Debug for UniquePointer<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl<T: core::fmt::Debug> core::fmt::Debug for UniquePointer<T> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         // Write the UniquePointer as if the value pointed to is stored in it
         f.write_fmt(format_args!("UniquePointer({:?})", self.as_ref()))
     }
@@ -94,6 +100,9 @@ impl<T> Drop for UniquePointer<T> {
 
 #[cfg(test)]
 mod tests {
+    use core::fmt::Write;
+    use heapless::String;
+
     use super::UniquePointer;
 
     #[test]
@@ -148,7 +157,7 @@ mod tests {
         let pointer = UniquePointer::new(value);
 
         // Clone the pointer and check whether the values are the same
-        assert_ne!(*pointer, *pointer.clone());
+        assert!((*pointer - *pointer.clone()).abs() < 0.000_01);
     }
 
     #[test]
@@ -159,7 +168,15 @@ mod tests {
         // Store it in a UniquePointer
         let pointer = UniquePointer::new(value);
 
+        // Write the debug format to a stack String
+        let mut debug_output = String::<64>::new();
+        write!(debug_output, "{pointer:?}").unwrap();
+
+        // Write the value we expect to a stack string
+        let mut expected_output = String::<32>::new();
+        write!(expected_output, "UniquePointer({value})").unwrap();
+
         // Check whether the pointer is printed as expected
-        assert_eq!(format!("{:?}", pointer), "UniquePointer(5)".to_owned());
+        assert_eq!(debug_output, expected_output);
     }
 }

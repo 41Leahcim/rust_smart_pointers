@@ -1,4 +1,4 @@
-use std::{mem, ops::Deref, ptr};
+use core::{mem, ops::Deref, ptr};
 
 #[derive(Debug)]
 struct ReferenceCounter<T>(T, usize);
@@ -67,10 +67,10 @@ impl<T> Deref for SharedPointer<T> {
     }
 }
 
-impl<T: std::fmt::Debug> std::fmt::Debug for SharedPointer<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl<T: core::fmt::Debug> core::fmt::Debug for SharedPointer<T> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         // Write the SharedPointer as if the ReferenceCounter is stored in it
-        f.write_fmt(format_args!("SharedPtr({:?})", self.as_ref()))
+        f.write_fmt(format_args!("SharedPointer({:?})", self.as_ref()))
     }
 }
 
@@ -99,7 +99,9 @@ impl<T> Drop for SharedPointer<T> {
 
 #[cfg(test)]
 mod tests {
-    use std::cell::RefCell;
+    use core::{cell::RefCell, fmt::Write};
+
+    use heapless::String;
 
     use super::SharedPointer;
 
@@ -158,7 +160,7 @@ mod tests {
         let pointer = SharedPointer::new(value);
 
         // Get the reference count
-        let reference_count = unsafe { pointer.0.as_ref().1 };
+        let mut reference_count = unsafe { pointer.0.as_ref().1 };
 
         // Check whether it is 1
         assert_eq!(reference_count, 1);
@@ -170,9 +172,15 @@ mod tests {
             assert_eq!(*pointer, *cloned_pointer);
             assert_eq!(pointer.0, cloned_pointer.0);
 
+            // Get the reference count
+            reference_count = unsafe { pointer.0.as_ref().1 };
+
             // Check whether the reference count is 2
             assert_eq!(reference_count, 2);
         }
+
+        // Get the reference count
+        reference_count = unsafe { pointer.0.as_ref().1 };
 
         // Check whether the reference count is 1
         assert_eq!(reference_count, 1);
@@ -186,7 +194,15 @@ mod tests {
         // Store it in a SharedPointer
         let pointer = SharedPointer::new(value);
 
-        // Check whether the pointer is printed as expected
-        assert_eq!(format!("{:?}", pointer), "UniquePointer(5)".to_owned());
+        // Write the debug format to a stack String
+        let mut debug_output = String::<64>::new();
+        write!(debug_output, "{pointer:?}").unwrap();
+
+        // Write the format we expect to a stack String
+        let mut expected_output = String::<32>::new();
+        write!(expected_output, "SharedPointer({value})").unwrap();
+
+        // Check whether the pointer is formatted as expected
+        assert_eq!(debug_output, expected_output);
     }
 }

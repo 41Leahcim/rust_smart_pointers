@@ -72,5 +72,5 @@ fn debug() {
     let pointer = SharedPointer::new(value);
 
     // Check whether the pointer is printed as expected
-    assert_eq!(format!("{:?}", pointer), "UniquePointer(5)".to_owned());
+    assert_eq!(format!("{:?}", pointer), format!("SharedPointer({value})"));
 }
