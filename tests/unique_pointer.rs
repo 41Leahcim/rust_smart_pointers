@@ -1,3 +1,7 @@
+#![feature(type_name_of_val)]
+
+use std::any::type_name_of_val;
+
 use smart_pointers::UniquePointer;
 
 #[test]
@@ -48,11 +52,28 @@ fn cloning() {
     // Generate a random value
     let value = rand::random::<f64>();
 
+    let value = vec![value];
+
     // Store it in a UniquePointer
     let pointer = UniquePointer::new(value);
 
+    let cloned_pointer = pointer.clone();
+
     // Clone the pointer and check whether the values are the same
     assert_eq!(*pointer, *pointer.clone());
+
+    // Without alloc, the clone method will be called on the vector instead of the pointer.
+    #[cfg(not(feature = "alloc"))]
+    assert_ne!(
+        type_name_of_val(&pointer),
+        type_name_of_val(&cloned_pointer)
+    );
+
+    #[cfg(feature = "alloc")]
+    assert_eq!(
+        type_name_of_val(&pointer),
+        type_name_of_val(&cloned_pointer)
+    );
 }
 
 #[test]
