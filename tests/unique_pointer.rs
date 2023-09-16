@@ -60,16 +60,9 @@ fn cloning() {
     let cloned_pointer = pointer.clone();
 
     // Clone the pointer and check whether the values are the same
-    assert_eq!(*pointer, *pointer.clone());
+    assert_eq!(*pointer, *cloned_pointer);
 
     // Without alloc, the clone method will be called on the vector instead of the pointer.
-    #[cfg(not(feature = "alloc"))]
-    assert_ne!(
-        type_name_of_val(&pointer),
-        type_name_of_val(&cloned_pointer)
-    );
-
-    #[cfg(feature = "alloc")]
     assert_eq!(
         type_name_of_val(&pointer),
         type_name_of_val(&cloned_pointer)

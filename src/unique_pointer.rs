@@ -1,28 +1,22 @@
 use core::{
-    mem,
+    alloc::Layout,
     ops::{Deref, DerefMut},
     ptr,
 };
 
-extern crate alloc;
-
-#[cfg(feature = "alloc")]
 use alloc::borrow::ToOwned;
+
+extern crate alloc;
 
 pub struct UniquePointer<T>(ptr::NonNull<T>);
 
 impl<T> UniquePointer<T> {
     fn allocate_memory() -> ptr::NonNull<T> {
         // Allocate memory
-        let pointer = unsafe { libc::malloc(mem::size_of::<T>()) };
-
-        // Panic if it failed
-        if pointer.is_null() {
-            panic!("No memory");
-        }
+        let pointer = unsafe { alloc::alloc::alloc(Layout::new::<T>()) };
 
         // Store the pointer in a non-null pointer and return it
-        ptr::NonNull::<T>::new(pointer.cast()).unwrap()
+        ptr::NonNull::<T>::new(pointer.cast()).expect("No memory")
     }
 
     pub fn new(value: T) -> Self {
@@ -43,19 +37,10 @@ impl<T: Default> Default for UniquePointer<T> {
     }
 }
 
-#[cfg(feature = "alloc")]
 impl<T: Clone> Clone for UniquePointer<T> {
     fn clone(&self) -> Self {
         // Clone the value stored in the UniquePointer and use it to create a new one
         Self::new(self.deref().to_owned())
-    }
-}
-
-#[cfg(not(feature = "alloc"))]
-impl<T: Copy> Clone for UniquePointer<T> {
-    fn clone(&self) -> Self {
-        // Clone the value stored in the UniquePointer and use it to create a new one
-        Self::new(*self.deref())
     }
 }
 
@@ -103,7 +88,7 @@ impl<T> Drop for UniquePointer<T> {
             pointer.drop_in_place();
 
             // Free the memory
-            libc::free(pointer.cast());
+            alloc::alloc::dealloc(pointer.cast(), Layout::new::<T>());
         };
     }
 }

@@ -1,4 +1,6 @@
-use core::{mem, ops::Deref, ptr};
+use core::{alloc::Layout, ops::Deref, ptr};
+
+extern crate alloc;
 
 #[derive(Debug)]
 struct ReferenceCounter<T>(T, usize);
@@ -8,15 +10,10 @@ pub struct SharedPointer<T>(ptr::NonNull<ReferenceCounter<T>>);
 impl<T> SharedPointer<T> {
     fn allocate_memory() -> ptr::NonNull<ReferenceCounter<T>> {
         // Allocate memory
-        let pointer = unsafe { libc::malloc(mem::size_of::<ReferenceCounter<T>>()) };
-
-        // Panic if it failed
-        if pointer.is_null() {
-            panic!("No memory");
-        }
+        let pointer = unsafe { alloc::alloc::alloc(Layout::new::<ReferenceCounter<T>>()) };
 
         // Store the pointer in a non-null pointer and return it
-        ptr::NonNull::new(pointer.cast()).unwrap()
+        ptr::NonNull::new(pointer.cast()).expect("No memory")
     }
 
     pub fn new(value: T) -> Self {
@@ -91,7 +88,7 @@ impl<T> Drop for SharedPointer<T> {
                 pointer.drop_in_place();
 
                 // Free the memory
-                libc::free(pointer.cast());
+                alloc::alloc::dealloc(pointer.cast(), Layout::new::<ReferenceCounter<T>>());
             };
         }
     }
