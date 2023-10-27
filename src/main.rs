@@ -1,4 +1,8 @@
-use std::{cell::RefCell, env::args, rc::Rc, time::Instant};
+use std::{
+    env::args,
+    sync::{Arc, Mutex},
+    time::Instant,
+};
 
 use smart_pointers::{SharedPointer, UniquePointer};
 
@@ -20,8 +24,8 @@ fn shared_pointer_test(print: bool) {
     let pointer2 = SharedPointer::new(2);
     let pointer3 = pointer.clone();
 
-    let pointer4 = SharedPointer::new(RefCell::new(Vec::with_capacity(10)));
-    pointer4.borrow_mut().push(1);
+    let pointer4 = SharedPointer::new(Mutex::new(Vec::with_capacity(10)));
+    pointer4.lock().unwrap().push(1);
 
     if print {
         println!("{}", *pointer2 + *pointer3);
@@ -41,13 +45,13 @@ fn box_test(print: bool) {
     }
 }
 
-fn rc_test(print: bool) {
-    let pointer = Rc::new(1);
-    let pointer2 = Rc::new(2);
+fn arc_test(print: bool) {
+    let pointer = Arc::new(1);
+    let pointer2 = Arc::new(2);
     let pointer3 = pointer.clone();
 
-    let pointer4 = Rc::new(RefCell::new(Vec::<i32>::with_capacity(10)));
-    pointer4.borrow_mut().push(1);
+    let pointer4 = Arc::new(Mutex::new(Vec::<i32>::with_capacity(10)));
+    pointer4.lock().unwrap().push(1);
 
     if print {
         println!("{}", *pointer2 + *pointer3);
@@ -62,9 +66,9 @@ fn memory_leak_test() {
     print_test_mark("Start box test");
     unique_pointer_test(true);
     print_test_mark("End box test");
-    print_test_mark("Start rc test");
+    print_test_mark("Start Arc test");
     shared_pointer_test(true);
-    print_test_mark("End rc test");
+    print_test_mark("End Arc test");
 }
 
 fn test_performance(function: impl Fn(bool), name: &str) {
@@ -81,7 +85,7 @@ fn performance_test() {
     test_performance(unique_pointer_test, "Unique pointer");
     test_performance(shared_pointer_test, "Shared pointer");
     test_performance(box_test, "Box");
-    test_performance(rc_test, "Rc");
+    test_performance(arc_test, "Arc");
 }
 
 fn main() {

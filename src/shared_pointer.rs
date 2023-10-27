@@ -1,9 +1,14 @@
-use core::{alloc::Layout, ops::Deref, ptr};
+use core::{
+    alloc::Layout,
+    ops::Deref,
+    ptr,
+    sync::atomic::{AtomicUsize, Ordering},
+};
 
 extern crate alloc;
 
 #[derive(Debug)]
-struct ReferenceCounter<T>(T, usize);
+struct ReferenceCounter<T>(T, AtomicUsize);
 
 pub struct SharedPointer<T>(ptr::NonNull<ReferenceCounter<T>>);
 
@@ -21,7 +26,7 @@ impl<T> SharedPointer<T> {
         let pointer = Self::allocate_memory();
 
         // Create a reference counter storing the value
-        let reference_counter = ReferenceCounter(value, 1);
+        let reference_counter = ReferenceCounter(value, AtomicUsize::new(1));
 
         // Store the reference counter at the address pointed to by the pointer
         unsafe { pointer.as_ptr().write(reference_counter) };
@@ -40,9 +45,10 @@ impl<T: Default> Default for SharedPointer<T> {
 impl<T> Clone for SharedPointer<T> {
     fn clone(&self) -> Self {
         // Increment the reference count
-        unsafe {
-            self.0.as_ptr().as_mut().unwrap().1 += 1;
-        }
+        unsafe { self.0.as_ptr().as_mut() }
+            .unwrap()
+            .1
+            .fetch_add(1, Ordering::Relaxed);
 
         // Copy the pointer to a new SharedPointer and return it
         Self(self.0)
@@ -77,10 +83,8 @@ impl<T> Drop for SharedPointer<T> {
         let reference_counter = unsafe { self.0.as_mut() };
 
         // Decrement the reference count
-        reference_counter.1 -= 1;
-
         // If the reference count is 0
-        if reference_counter.1 == 0 {
+        if reference_counter.1.fetch_sub(1, Ordering::Relaxed) <= 1 {
             // Get the pointer
             let pointer = self.0.as_ptr();
             unsafe {
@@ -96,7 +100,7 @@ impl<T> Drop for SharedPointer<T> {
 
 #[cfg(test)]
 mod tests {
-    use core::{cell::RefCell, fmt::Write};
+    use core::{cell::RefCell, fmt::Write, sync::atomic::Ordering};
 
     use heapless::String;
 
@@ -157,7 +161,7 @@ mod tests {
         let pointer = SharedPointer::new(value);
 
         // Get the reference count
-        let mut reference_count = unsafe { pointer.0.as_ref().1 };
+        let mut reference_count = unsafe { pointer.0.as_ref().1.load(Ordering::Relaxed) };
 
         // Check whether it is 1
         assert_eq!(reference_count, 1);
@@ -170,14 +174,14 @@ mod tests {
             assert_eq!(pointer.0, cloned_pointer.0);
 
             // Get the reference count
-            reference_count = unsafe { pointer.0.as_ref().1 };
+            reference_count = unsafe { pointer.0.as_ref().1.load(Ordering::Relaxed) };
 
             // Check whether the reference count is 2
             assert_eq!(reference_count, 2);
         }
 
         // Get the reference count
-        reference_count = unsafe { pointer.0.as_ref().1 };
+        reference_count = unsafe { pointer.0.as_ref().1.load(Ordering::Relaxed) };
 
         // Check whether the reference count is 1
         assert_eq!(reference_count, 1);
