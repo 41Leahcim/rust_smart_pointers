@@ -12,6 +12,10 @@ struct ReferenceCounter<T>(T, AtomicUsize);
 
 pub struct SharedPointer<T>(ptr::NonNull<ReferenceCounter<T>>);
 
+unsafe impl<T: Send> Send for SharedPointer<T> {}
+
+unsafe impl<T: Sync> Sync for SharedPointer<T> {}
+
 impl<T> SharedPointer<T> {
     fn allocate_memory() -> ptr::NonNull<ReferenceCounter<T>> {
         // Allocate memory

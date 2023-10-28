@@ -1,4 +1,8 @@
-use std::cell::RefCell;
+use std::{
+    cell::RefCell,
+    sync::{Arc, RwLock},
+    thread,
+};
 
 use smart_pointers::SharedPointer;
 
@@ -73,4 +77,22 @@ fn debug() {
 
     // Check whether the pointer is printed as expected
     assert_eq!(format!("{:?}", pointer), format!("SharedPointer({value})"));
+}
+
+#[test]
+fn thread_safety() {
+    let vec = Arc::new(RwLock::new(vec![]));
+    vec.write().unwrap().push(0);
+    thread::spawn({
+        let vec = vec.clone();
+        move || {
+            if let Ok(mut vec) = vec.write() {
+                vec.push(1);
+            }
+        }
+    })
+    .join()
+    .unwrap();
+
+    assert_eq!(&vec.read().unwrap().as_slice(), &[0, 1]);
 }

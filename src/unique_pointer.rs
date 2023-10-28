@@ -10,6 +10,8 @@ extern crate alloc;
 
 pub struct UniquePointer<T>(ptr::NonNull<T>);
 
+unsafe impl<T: Send> Send for UniquePointer<T> {}
+
 impl<T> UniquePointer<T> {
     fn allocate_memory() -> ptr::NonNull<T> {
         // Allocate memory
