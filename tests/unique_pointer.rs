@@ -1,5 +1,3 @@
-#![feature(type_name_of_val)]
-
 use std::any::type_name_of_val;
 
 use smart_pointers::UniquePointer;
