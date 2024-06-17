@@ -9,7 +9,7 @@ opt-level = 'z'
 [features]
 
 [dev-dependencies]
-rand = "0.8.5"
+rand = "0.8"
+heapless = "0.8"
 
 [dependencies]
-heapless = "0.7.16"
