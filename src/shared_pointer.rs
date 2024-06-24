@@ -58,7 +58,7 @@ impl<T> Clone for SharedPointer<T> {
         unsafe { self.0.as_ptr().as_ref() }
             .unwrap()
             .1
-            .fetch_add(1, Ordering::SeqCst);
+            .fetch_add(1, Ordering::Relaxed);
 
         // Copy the pointer to a new SharedPointer and return it
         Self(self.0)
@@ -100,7 +100,7 @@ impl<T> Drop for SharedPointer<T> {
 
         // Decrement the reference count
         // If the reference count is 0
-        if reference_counter.1.fetch_sub(1, Ordering::SeqCst) <= 1 {
+        if reference_counter.1.fetch_sub(1, Ordering::Relaxed) <= 1 {
             // Get the pointer
             let pointer = self.0.as_ptr();
             // Safety: No dangling pointers are left and the pointer is not NULL
@@ -179,7 +179,7 @@ mod tests {
 
         // Get the reference count
         // Safety: Immutable reference and pointer is not null
-        let mut reference_count = unsafe { pointer.0.as_ref().1.load(Ordering::SeqCst) };
+        let mut reference_count = unsafe { pointer.0.as_ref().1.load(Ordering::Relaxed) };
 
         // Check whether it is 1
         assert_eq!(reference_count, 1);
@@ -193,7 +193,7 @@ mod tests {
 
             // Get the reference count
             // Safety: Pointer is not null and immutable reference
-            reference_count = unsafe { pointer.0.as_ref().1.load(Ordering::SeqCst) };
+            reference_count = unsafe { pointer.0.as_ref().1.load(Ordering::Relaxed) };
 
             // Check whether the reference count is 2
             assert_eq!(reference_count, 2);
@@ -201,7 +201,7 @@ mod tests {
 
         // Get the reference count
         // Safety: Pointer is not null and shared reference
-        reference_count = unsafe { pointer.0.as_ref().1.load(Ordering::SeqCst) };
+        reference_count = unsafe { pointer.0.as_ref().1.load(Ordering::Relaxed) };
 
         // Check whether the reference count is 1
         assert_eq!(reference_count, 1);
