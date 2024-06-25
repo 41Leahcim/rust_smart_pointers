@@ -15,7 +15,8 @@
     clippy::semicolon_outside_block,
     clippy::use_debug,
     clippy::redundant_clone,
-    clippy::min_ident_chars
+    clippy::min_ident_chars,
+    clippy::must_use_candidate
 )]
 mod shared_pointer;
 mod unique_pointer;

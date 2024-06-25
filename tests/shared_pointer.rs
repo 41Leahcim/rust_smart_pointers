@@ -1,8 +1,4 @@
-use std::{
-    cell::RefCell,
-    sync::{Arc, RwLock},
-    thread,
-};
+use std::{cell::RefCell, sync::RwLock, thread};
 
 use smart_pointers::SharedPointer;
 
@@ -81,18 +77,33 @@ fn debug() {
 
 #[test]
 fn thread_safety() {
-    let vec = Arc::new(RwLock::new(vec![]));
-    vec.write().unwrap().push(0);
-    thread::spawn({
-        let vec = vec.clone();
-        move || {
-            if let Ok(mut vec) = vec.write() {
-                vec.push(1);
-            }
+    const SIZE: usize = 1_000;
+    let vec = SharedPointer::new(RwLock::new(vec![]));
+    thread::scope(|scope| {
+        for _ in 0..1_000 {
+            scope.spawn({
+                let vec = vec.clone();
+                move || {
+                    thread::scope(|scope2| {
+                        for _ in 0..1_000 {
+                            scope2.spawn({
+                                let vec = vec.clone();
+                                move || {
+                                    if let Ok(mut vec) = vec.write() {
+                                        vec.push(1);
+                                    }
+                                }
+                            });
+                        }
+                    });
+                }
+            });
         }
-    })
-    .join()
-    .unwrap();
+    });
 
-    assert_eq!(&vec.read().unwrap().as_slice(), &[0, 1]);
+    let slice = vec.read().unwrap();
+    let slice = slice.as_slice();
+    assert_eq!(slice.len(), SIZE * SIZE);
+    assert!(slice.iter().all(|&value| value == 1));
+    assert_eq!(vec.reference_count(), 1);
 }
