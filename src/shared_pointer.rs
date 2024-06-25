@@ -14,7 +14,11 @@ pub struct SharedPointer<T>(ptr::NonNull<ReferenceCounter<T>>);
 
 /// Safety:
 /// Counter is atomic and mutable access to the value is impossible without interior mutability.
-unsafe impl<T: Send> Send for SharedPointer<T> {}
+unsafe impl<T: Send + Sync> Send for SharedPointer<T> {}
+
+/// Safety:
+/// Counter is atomic and mutable access to the value is impossible without interior mutability.
+unsafe impl<T: Send + Sync> Sync for SharedPointer<T> {}
 
 impl<T> SharedPointer<T> {
     fn allocate_memory() -> ptr::NonNull<ReferenceCounter<T>> {
@@ -44,8 +48,12 @@ impl<T> SharedPointer<T> {
 
     #[inline]
     pub fn reference_count(&self) -> usize {
+        self.inner().1.load(Ordering::Relaxed)
+    }
+
+    const fn inner(&self) -> &ReferenceCounter<T> {
         // Safety: Pointer can't be null
-        unsafe { self.0.as_ref() }.1.load(Ordering::Relaxed)
+        unsafe { self.0.as_ref() }
     }
 }
 
@@ -60,11 +68,7 @@ impl<T> Clone for SharedPointer<T> {
     #[inline]
     fn clone(&self) -> Self {
         // Increment the reference count
-        // Safety: Immutable reference and pointer can't be NULL
-        unsafe { self.0.as_ptr().as_ref() }
-            .unwrap()
-            .1
-            .fetch_add(1, Ordering::Relaxed);
+        self.inner().1.fetch_add(1, Ordering::Relaxed);
 
         // Copy the pointer to a new SharedPointer and return it
         Self(self.0)
@@ -75,8 +79,7 @@ impl<T> AsRef<T> for SharedPointer<T> {
     #[inline]
     fn as_ref(&self) -> &T {
         // Return a reference to the value stored in the reference counter
-        // Safety: Immutable reference and pointer can't be NULL
-        unsafe { &self.0.as_ref().0 }
+        &self.inner().0
     }
 }
 
@@ -101,12 +104,11 @@ impl<T> Drop for SharedPointer<T> {
     #[inline]
     fn drop(&mut self) {
         // Get a mutable reference to the ReferenceCounter
-        // Safety: Pointer is not NULL and reference is immutable
-        let reference_counter = unsafe { self.0.as_ref() };
+        let reference_counter = self.inner();
 
         // Decrement the reference count
         // If the reference count is 0
-        if reference_counter.1.fetch_sub(1, Ordering::Relaxed) <= 1 {
+        if reference_counter.1.fetch_sub(1, Ordering::Release) <= 1 {
             // Get the pointer
             let pointer = self.0.as_ptr();
             // Safety: No dangling pointers are left and the pointer is not NULL
@@ -184,8 +186,7 @@ mod tests {
         let pointer = SharedPointer::new(value);
 
         // Get the reference count
-        // Safety: Immutable reference and pointer is not null
-        let mut reference_count = unsafe { pointer.0.as_ref().1.load(Ordering::Relaxed) };
+        let mut reference_count = pointer.inner().1.load(Ordering::Relaxed);
 
         // Check whether it is 1
         assert_eq!(reference_count, 1);
@@ -198,16 +199,14 @@ mod tests {
             assert_eq!(pointer.0, cloned_pointer.0);
 
             // Get the reference count
-            // Safety: Pointer is not null and immutable reference
-            reference_count = unsafe { pointer.0.as_ref().1.load(Ordering::Relaxed) };
+            reference_count = pointer.inner().1.load(Ordering::Relaxed);
 
             // Check whether the reference count is 2
             assert_eq!(reference_count, 2);
         }
 
         // Get the reference count
-        // Safety: Pointer is not null and shared reference
-        reference_count = unsafe { pointer.0.as_ref().1.load(Ordering::Relaxed) };
+        reference_count = pointer.inner().1.load(Ordering::Relaxed);
 
         // Check whether the reference count is 1
         assert_eq!(reference_count, 1);
