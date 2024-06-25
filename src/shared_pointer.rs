@@ -64,7 +64,7 @@ impl<T> Clone for SharedPointer<T> {
         unsafe { self.0.as_ptr().as_ref() }
             .unwrap()
             .1
-            .fetch_add(1, Ordering::Acquire);
+            .fetch_add(1, Ordering::Relaxed);
 
         // Copy the pointer to a new SharedPointer and return it
         Self(self.0)
@@ -106,7 +106,7 @@ impl<T> Drop for SharedPointer<T> {
 
         // Decrement the reference count
         // If the reference count is 0
-        if reference_counter.1.fetch_sub(1, Ordering::Release) <= 1 {
+        if reference_counter.1.fetch_sub(1, Ordering::Relaxed) <= 1 {
             // Get the pointer
             let pointer = self.0.as_ptr();
             // Safety: No dangling pointers are left and the pointer is not NULL
